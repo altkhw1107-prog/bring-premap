@@ -67,9 +67,10 @@ export default defineConfig(async ({ mode }) => {
             binding: d1,
             database_name: d1DatabaseName,
             database_id: d1DatabaseId,
-            // Drizzle writes migrations here; `wrangler d1 migrations apply`
-            // reads the same directory.
-            migrations_dir: "drizzle",
+            // Wrangler resolves this against the generated config in
+            // dist/server/, so climb back to the drizzle/ directory that
+            // drizzle-kit writes at the project root.
+            migrations_dir: "../../drizzle",
           },
         ]
       : [],
