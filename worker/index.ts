@@ -12,7 +12,7 @@ import {
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
-  CAPTURE_BUCKET: R2Bucket;
+  CAPTURE_BUCKET?: R2Bucket;
   KAKAO_REST_API_KEY?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
@@ -638,19 +638,27 @@ async function uploadCapturePhoto(id: string, request: Request, env: Env) {
       upsert: false,
     });
     if (storageError) throw storageError;
-    await env.CAPTURE_BUCKET.put(objectKey, originalBuffer, {
-      httpMetadata: { contentType: file.type || "image/jpeg" },
-      customMetadata: {
-        sessionId: id,
-        stage: String(stage),
-        category,
-        aiStatus: "UPLOADED",
-      },
-    });
   } catch (error) {
     await supabase.storage.from(bucket).remove([supabasePath]).catch(() => undefined);
     console.error("Photo storage failed", (error as { message?: string }).message || "unknown");
     return json({ error: "사진을 Supabase door-images 버킷에 저장하지 못했습니다." }, 502);
+  }
+  // R2 사본은 선택 사항이다. 바인딩이 없거나 쓰기가 실패해도 Supabase에
+  // 저장된 원본이 정본이므로 업로드를 되돌리지 않는다.
+  if (env.CAPTURE_BUCKET) {
+    try {
+      await env.CAPTURE_BUCKET.put(objectKey, originalBuffer, {
+        httpMetadata: { contentType: file.type || "image/jpeg" },
+        customMetadata: {
+          sessionId: id,
+          stage: String(stage),
+          category,
+          aiStatus: "UPLOADED",
+        },
+      });
+    } catch (error) {
+      console.error("R2 mirror failed", (error as { message?: string }).message || "unknown");
+    }
   }
   const now = new Date().toISOString();
   try {
@@ -663,7 +671,10 @@ async function uploadCapturePhoto(id: string, request: Request, env: Env) {
         supabasePath, bucket, now)
       .run();
   } catch (error) {
-    await Promise.allSettled([env.CAPTURE_BUCKET.delete(objectKey), supabase.storage.from(bucket).remove([supabasePath])]);
+    await Promise.allSettled([
+      env.CAPTURE_BUCKET ? env.CAPTURE_BUCKET.delete(objectKey) : Promise.resolve(),
+      supabase.storage.from(bucket).remove([supabasePath]),
+    ]);
     console.error("Photo metadata save failed", (error as { message?: string }).message || "unknown");
     return json({ error: "사진 정보 저장을 완료하지 못했습니다." }, 502);
   }
@@ -800,7 +811,7 @@ async function serveCapturePhoto(photoId: string, env: Env) {
       headers: { "content-type": photo.contentType, "cache-control": "private, max-age=300" },
     });
   }
-  const object = await env.CAPTURE_BUCKET.get(photo.objectKey);
+  const object = env.CAPTURE_BUCKET ? await env.CAPTURE_BUCKET.get(photo.objectKey) : null;
   if (!object) return new Response("Not found", { status: 404 });
   const headers = new Headers();
   object.writeHttpMetadata(headers);

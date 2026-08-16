@@ -46,7 +46,10 @@ export default defineConfig(async ({ mode }) => {
   const d1DatabaseName = serverEnv.CF_D1_DATABASE_NAME || "site-creator-d1";
   const d1DatabaseId =
     serverEnv.CF_D1_DATABASE_ID || SITE_CREATOR_PLACEHOLDER_DATABASE_ID;
-  const r2BucketName = serverEnv.CF_R2_BUCKET_NAME || "site-creator-r2";
+  // R2 is an optional mirror of the Supabase photo store. Leaving
+  // CF_R2_BUCKET_NAME unset deploys without the binding, and the Worker skips
+  // the mirror rather than failing the upload.
+  const r2BucketName = serverEnv.CF_R2_BUCKET_NAME;
 
   const vars = { ...MODEL_VARS };
   for (const key of [...Object.keys(MODEL_VARS), ...SECRET_VARS]) {
@@ -74,14 +77,15 @@ export default defineConfig(async ({ mode }) => {
           },
         ]
       : [],
-    r2_buckets: r2
-      ? [
-          {
-            binding: r2,
-            bucket_name: r2BucketName,
-          },
-        ]
-      : [],
+    r2_buckets:
+      r2 && r2BucketName
+        ? [
+            {
+              binding: r2,
+              bucket_name: r2BucketName,
+            },
+          ]
+        : [],
     vars,
   };
 
