@@ -1,0 +1,70 @@
+export const CAPTURE_CATEGORY = {
+  MANUAL_DOOR: "MANUAL_DOOR",
+  AUTO_DOOR: "AUTO_DOOR",
+  RAMP: "RAMP",
+  THRESHOLD: "THRESHOLD",
+  FLOOR_MATERIAL: "FLOOR_MATERIAL",
+  OTHER: "OTHER",
+  DOOR_GAP: "DOOR_GAP",
+  ELEVATOR_INSIDE: "ELEVATOR_INSIDE",
+} as const;
+
+export type CaptureCategoryKey = typeof CAPTURE_CATEGORY[keyof typeof CAPTURE_CATEGORY];
+
+export const CAPTURE_CATEGORY_KEYS = Object.values(CAPTURE_CATEGORY) as CaptureCategoryKey[];
+
+export const CAPTURE_CATEGORY_LABELS: Record<CaptureCategoryKey, string> = {
+  MANUAL_DOOR: "수동문",
+  AUTO_DOOR: "자동문/보안문",
+  RAMP: "경사로",
+  THRESHOLD: "턱/문턱",
+  FLOOR_MATERIAL: "바닥재질",
+  OTHER: "기타",
+  DOOR_GAP: "문/바닥 틈",
+  ELEVATOR_INSIDE: "엘레베이터 내부",
+};
+
+export const STAGE_CAPTURE_CATEGORY_KEYS = {
+  0: [CAPTURE_CATEGORY.MANUAL_DOOR, CAPTURE_CATEGORY.AUTO_DOOR, CAPTURE_CATEGORY.RAMP, CAPTURE_CATEGORY.THRESHOLD, CAPTURE_CATEGORY.FLOOR_MATERIAL, CAPTURE_CATEGORY.OTHER],
+  1: [CAPTURE_CATEGORY.DOOR_GAP, CAPTURE_CATEGORY.ELEVATOR_INSIDE, CAPTURE_CATEGORY.OTHER],
+  2: [CAPTURE_CATEGORY.MANUAL_DOOR, CAPTURE_CATEGORY.AUTO_DOOR, CAPTURE_CATEGORY.RAMP, CAPTURE_CATEGORY.THRESHOLD, CAPTURE_CATEGORY.FLOOR_MATERIAL, CAPTURE_CATEGORY.OTHER],
+} as const satisfies Record<number, readonly CaptureCategoryKey[]>;
+
+const LEGACY_CATEGORY_ALIASES: Record<string, CaptureCategoryKey> = {
+  수동문: CAPTURE_CATEGORY.MANUAL_DOOR,
+  "자동문·보안문": CAPTURE_CATEGORY.AUTO_DOOR,
+  "자동문/보안문": CAPTURE_CATEGORY.AUTO_DOOR,
+  경사로: CAPTURE_CATEGORY.RAMP,
+  "턱·문턱": CAPTURE_CATEGORY.THRESHOLD,
+  "턱/문턱": CAPTURE_CATEGORY.THRESHOLD,
+  "바닥 재질": CAPTURE_CATEGORY.FLOOR_MATERIAL,
+  바닥재질: CAPTURE_CATEGORY.FLOOR_MATERIAL,
+  "문·바닥 틈": CAPTURE_CATEGORY.DOOR_GAP,
+  "문/바닥 틈": CAPTURE_CATEGORY.DOOR_GAP,
+  "승강기 내부": CAPTURE_CATEGORY.ELEVATOR_INSIDE,
+  "엘리베이터 내부": CAPTURE_CATEGORY.ELEVATOR_INSIDE,
+  "엘레베이터 내부": CAPTURE_CATEGORY.ELEVATOR_INSIDE,
+  엘리베이터: CAPTURE_CATEGORY.ELEVATOR_INSIDE,
+  "호출 버튼": CAPTURE_CATEGORY.ELEVATOR_INSIDE,
+  "문 너비": CAPTURE_CATEGORY.ELEVATOR_INSIDE,
+  기타: CAPTURE_CATEGORY.OTHER,
+  "기타 확인사항": CAPTURE_CATEGORY.OTHER,
+  "수령 공간": CAPTURE_CATEGORY.OTHER,
+  판단불가: CAPTURE_CATEGORY.OTHER,
+  "판단 불가": CAPTURE_CATEGORY.OTHER,
+  기준사진: CAPTURE_CATEGORY.OTHER,
+};
+
+export function toCaptureCategoryKey(value: unknown): CaptureCategoryKey {
+  const raw = String(value || "").trim();
+  if (CAPTURE_CATEGORY_KEYS.includes(raw as CaptureCategoryKey)) return raw as CaptureCategoryKey;
+  return LEGACY_CATEGORY_ALIASES[raw] || CAPTURE_CATEGORY.OTHER;
+}
+
+export function captureCategoryLabel(value: unknown): string {
+  return CAPTURE_CATEGORY_LABELS[toCaptureCategoryKey(value)];
+}
+
+export function captureCategoryPromptList(): string {
+  return CAPTURE_CATEGORY_KEYS.map((key) => `${key}=${CAPTURE_CATEGORY_LABELS[key]}`).join(", ");
+}

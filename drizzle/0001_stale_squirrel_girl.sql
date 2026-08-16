@@ -1,0 +1,1 @@
+ALTER TABLE `capture_photos` ADD `category` text DEFAULT '기준사진' NOT NULL;
